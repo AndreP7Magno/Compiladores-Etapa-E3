@@ -1,16 +1,28 @@
 grammar Gramatica;
 
+/*
+Programa: Declarações de funções e uma função main SEMPRE
+
+def fun x = x + 1
+
+def main =
+  let x = read_int
+  in
+     print concat "Resultado" (string (fun x))
+*/
 @header{
-	using Antlr4.Runtime;
 	using System;
 	using System.Collections;
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Text;
+	using System.Threading.Tasks;
+	using Antlr4.Runtime;
 }
 
 @members
-{	ArrayList tabela = new ArrayList();
-	ArrayList aux = new ArrayList();
+{	List<Types> symbols = new List<Types>();
 	int nv = 0;
-	int x;
 }
 
 WS : [ \r\t\u000C\n]+ -> skip;
@@ -116,11 +128,6 @@ funcbody
         'else' bodyfalse=funcbody
         #fbody_if_rule
     |   'let' letlist 
-		{
-			ArrayList symbol = new ArrayList();
-			tabela.AddRange(symbol);
-			
-		}
         'in' fnested=funcbody {nv++;}
         #fbody_let_rule
     |   metaexpr
@@ -148,11 +155,9 @@ letlist_cont
 letvarexpr
   :   sym=symbol '=' funcbody   
   {	
-	aux = (ArrayList)tabela[nv];
-	if(aux.IndexOf($symbol.id) != null)
-		aux.Add($symbol.id);
-	Console.WriteLine("store " + aux.IndexOf($symbol.id));
-	tabela[nv] = aux;
+	if(symbols.IndexOf($symbol.id) == -1)
+		symbols.Add($symbol.id);
+	Console.WriteLine("store " + symbols.IndexOf($symbol.id));
   }                 #letvarattr_rule
   |    '_'       '=' funcbody                    #letvarresult_ignore_rule
   |    head=symbol '::' tail=symbol '=' funcbody #letunpack_rule
@@ -224,20 +229,12 @@ metaexpr
     | 'get' name=symbol funcbody                  #me_class_get_rule      // get campo
     | 'set' name=symbol cl=funcbody val=funcbody  #me_class_set_rule      // get campo
     | symbol                       
-	{	aux = (ArrayList)tabela[nv];
-		if(aux.IndexOf($symbol.id) != null)
-			Console.WriteLine("load " + aux.IndexOf($symbol.id));
-		else
-			{
-			for(x = nv; x > 0 ; x --)
-			{	
-				aux = (ArrayList)tabela[x];
-				if(aux.IndexOf($symbol.id) != null)
-					Console.WriteLine("load " + aux.IndexOf($symbol.id));
-			}
-			if(x == 0)
-				Console.WriteLine("Erro não há váriavel para ser carregada");
-			}			
+	{		
+			for(int i = symbols.Count-1; i >= 0 ; i--)
+			if(symbols[i].nivel == $symbol.id.nivel && symbols[i].nome == $symbol.id.nome) {
+				Console.WriteLine("load " + i); break;
+		}
+						
 	}               #me_exprsymbol_rule     // a single symbol
     | literal                                     #me_exprliteral_rule    // literal value
     | funcall                                     #me_exprfuncall_rule    // a funcion call
@@ -284,16 +281,21 @@ cast
 literal
     :   'nil'              #literalnil_rule
     |   ('true' | 'false') #literaltrueorfalse_rule
-    |   FLOAT            {Console.Write("push " + $FLOAT.text + "			float\n");}  #literal_float_rule
-    |   DECIMAL          {Console.Write("push " + $DECIMAL.text + "			decimal\n");}   #literal_decimal_rule
-    |   HEXADECIMAL      {Console.Write("push " + $HEXADECIMAL.text + "			hexadecimal\n");}  #literal_hexadecimal_rule
-    |   BINARY           {Console.Write("push " + $BINARY.text + "			binary\n");}  #literal_binary_rule
-    |   TOK_STR_LIT      {Console.Write("push " + $TOK_STR_LIT.text + "			string\n");}  #literalstring_rule
-    |   TOK_CHAR_LIT     {Console.Write("push " + $TOK_CHAR_LIT.text + "			char\n");}  #literal_char_rule
+    |   FLOAT            {Console.WriteLine("push " + $FLOAT.text);}  #literal_float_rule
+    |   DECIMAL          {Console.WriteLine("push " + $DECIMAL.text);}   #literal_decimal_rule
+    |   HEXADECIMAL      {Console.WriteLine("push " + $HEXADECIMAL.text);}  #literal_hexadecimal_rule
+    |   BINARY           {Console.WriteLine("push " + $BINARY.text);}  #literal_binary_rule
+    |   TOK_STR_LIT      {Console.WriteLine("push " + $TOK_STR_LIT.text);}  #literalstring_rule
+    |   TOK_CHAR_LIT     {Console.WriteLine("push " + $TOK_CHAR_LIT.text);}  #literal_char_rule
     ;
 
-symbol returns [string id]
-    : TOK_ID   {$id = $TOK_ID.text;}#symbol_rule
+symbol returns [Types id]
+    : TOK_ID   {
+	Types idz = new Types();
+	idz.nome = $TOK_ID.text;
+	idz.nivel = nv;
+	$id = idz;
+	}#symbol_rule
     ;
 
 // id: begins with a letter, follows letters, numbers or underscore
