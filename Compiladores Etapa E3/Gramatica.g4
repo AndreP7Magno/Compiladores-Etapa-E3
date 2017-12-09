@@ -1,15 +1,5 @@
 grammar Gramatica;
 
-/*
-Programa: Declarações de funções e uma função main SEMPRE
-
-def fun x = x + 1
-
-def main =
-  let x = read_int
-  in
-     print concat "Resultado" (string (fun x))
-*/
 @header{
 	using Antlr4.Runtime;
 	using System;
@@ -17,9 +7,10 @@ def main =
 }
 
 @members
-{
-	ArrayList symbols = new ArrayList();
-	int line = 0;
+{	ArrayList tabela = new ArrayList();
+	ArrayList aux = new ArrayList();
+	int nv = 0;
+	int x;
 }
 
 WS : [ \r\t\u000C\n]+ -> skip;
@@ -124,8 +115,13 @@ funcbody
         'then' bodytrue=funcbody
         'else' bodyfalse=funcbody
         #fbody_if_rule
-    |   'let' letlist
-        'in' fnested=funcbody
+    |   'let' letlist 
+		{
+			ArrayList symbol = new ArrayList();
+			tabela.AddRange(symbol);
+			
+		}
+        'in' fnested=funcbody {nv++;}
         #fbody_let_rule
     |   metaexpr
         #fbody_expr_rule
@@ -151,10 +147,12 @@ letlist_cont
 // x::rest = l
 letvarexpr
   :   sym=symbol '=' funcbody   
-  {
-	if(symbols.IndexOf($symbol.id) != null)
-		symbols.Add($symbol.id);
-	Console.WriteLine("store " + symbols.IndexOf($symbol.id));
+  {	
+	aux = (ArrayList)tabela[nv];
+	if(aux.IndexOf($symbol.id) != null)
+		aux.Add($symbol.id);
+	Console.WriteLine("store " + aux.IndexOf($symbol.id));
+	tabela[nv] = aux;
   }                 #letvarattr_rule
   |    '_'       '=' funcbody                    #letvarresult_ignore_rule
   |    head=symbol '::' tail=symbol '=' funcbody #letunpack_rule
@@ -203,7 +201,13 @@ metaexpr
     | TOK_NEG symbol                              #me_boolneg_rule        // Negate a variable
     | TOK_NEG '(' funcbody ')'                    #me_boolnegparens_rule  // or anything in between ( )
     | l=metaexpr op=TOK_CONCAT r=metaexpr         #me_listconcat_rule     // Sequence concatenation
-    | l=metaexpr op=TOK_DIV_OR_MUL r=metaexpr     #me_exprmuldiv_rule     // Div, Mult and mod are equal
+    | l=metaexpr op=TOK_DIV_OR_MUL r=metaexpr 
+		{
+			if($op.text == "*")
+				Console.WriteLine("mul");
+			if($op.text == "/")
+				Console.WriteLine("div");
+		}    #me_exprmuldiv_rule     // Div, Mult and mod are equal
     | l=metaexpr op=TOK_PLUS_OR_MINUS r=metaexpr
 		{
 			if($op.text == "+")
@@ -220,12 +224,19 @@ metaexpr
     | 'get' name=symbol funcbody                  #me_class_get_rule      // get campo
     | 'set' name=symbol cl=funcbody val=funcbody  #me_class_set_rule      // get campo
     | symbol                       
-	{	
-		if(symbols.IndexOf($symbol.id) != null)
-			Console.WriteLine("load " + symbols.IndexOf($symbol.id));
+	{	aux = (ArrayList)tabela[nv];
+		if(aux.IndexOf($symbol.id) != null)
+			Console.WriteLine("load " + aux.IndexOf($symbol.id));
 		else
 			{
-			Console.WriteLine("Erro não há váriavel para ser carregada");
+			for(x = nv; x > 0 ; x --)
+			{	
+				aux = (ArrayList)tabela[x];
+				if(aux.IndexOf($symbol.id) != null)
+					Console.WriteLine("load " + aux.IndexOf($symbol.id));
+			}
+			if(x == 0)
+				Console.WriteLine("Erro não há váriavel para ser carregada");
 			}			
 	}               #me_exprsymbol_rule     // a single symbol
     | literal                                     #me_exprliteral_rule    // literal value
@@ -273,12 +284,12 @@ cast
 literal
     :   'nil'              #literalnil_rule
     |   ('true' | 'false') #literaltrueorfalse_rule
-    |   FLOAT            {Console.WriteLine("push " + $FLOAT.text);}  #literal_float_rule
-    |   DECIMAL          {Console.WriteLine("push " + $DECIMAL.text);}   #literal_decimal_rule
-    |   HEXADECIMAL      {Console.WriteLine("push " + $HEXADECIMAL.text);}  #literal_hexadecimal_rule
-    |   BINARY           {Console.WriteLine("push " + $BINARY.text);}  #literal_binary_rule
-    |   TOK_STR_LIT      {Console.WriteLine("push " + $TOK_STR_LIT.text);}  #literalstring_rule
-    |   TOK_CHAR_LIT     {Console.WriteLine("push " + $TOK_CHAR_LIT.text);}  #literal_char_rule
+    |   FLOAT            {Console.Write("push " + $FLOAT.text + "			float\n");}  #literal_float_rule
+    |   DECIMAL          {Console.Write("push " + $DECIMAL.text + "			decimal\n");}   #literal_decimal_rule
+    |   HEXADECIMAL      {Console.Write("push " + $HEXADECIMAL.text + "			hexadecimal\n");}  #literal_hexadecimal_rule
+    |   BINARY           {Console.Write("push " + $BINARY.text + "			binary\n");}  #literal_binary_rule
+    |   TOK_STR_LIT      {Console.Write("push " + $TOK_STR_LIT.text + "			string\n");}  #literalstring_rule
+    |   TOK_CHAR_LIT     {Console.Write("push " + $TOK_CHAR_LIT.text + "			char\n");}  #literal_char_rule
     ;
 
 symbol returns [string id]
