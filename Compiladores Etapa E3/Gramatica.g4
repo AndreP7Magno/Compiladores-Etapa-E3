@@ -155,9 +155,10 @@ letlist_cont
 letvarexpr
   :   sym=symbol '=' funcbody   
   {	
-	if(symbols.IndexOf($symbol.id) == -1)
+	if(symbols.IndexOf($symbol.id) == -1){
 		symbols.Add($symbol.id);
-	Console.WriteLine("store " + symbols.IndexOf($symbol.id));
+		Console.WriteLine("store " + symbols.IndexOf($symbol.id));
+	}
   }                 #letvarattr_rule
   |    '_'       '=' funcbody                    #letvarresult_ignore_rule
   |    head=symbol '::' tail=symbol '=' funcbody #letunpack_rule
@@ -231,7 +232,7 @@ metaexpr
     | symbol                       
 	{		
 			for(int i = symbols.Count-1; i >= 0 ; i--)
-			if(symbols[i].nivel == $symbol.id.nivel && symbols[i].nome == $symbol.id.nome) {
+			if(symbols[i].nome == $symbol.id.nome) {
 				Console.WriteLine("load " + i); break;
 		}
 						
@@ -278,6 +279,7 @@ cast
   : c=basic_type funcbody #cast_rule
   ;
 
+//Printa na tela "Push mais o numero do literal"
 literal
     :   'nil'              #literalnil_rule
     |   ('true' | 'false') #literaltrueorfalse_rule
